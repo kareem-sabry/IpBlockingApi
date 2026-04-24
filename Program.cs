@@ -47,6 +47,9 @@ builder.Services.AddScoped<ICountryService,
 builder.Services.AddScoped<IIpService,
     IpService>();
 
+// ── Background services ───────────────────────────────────────────────────────
+builder.Services.AddHostedService<IpBlockingApi.BackgroundServices.TemporalBlockCleanupService>();
+
 // ── CORS ──────────────────────────────────────────────────────────────────────
 builder.Services.AddCors(options =>
 {
