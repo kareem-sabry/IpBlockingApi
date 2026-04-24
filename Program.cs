@@ -1,3 +1,8 @@
+using IpBlockingApi.Repositories.Implementations;
+using IpBlockingApi.Repositories.Interfaces;
+using IpBlockingApi.Services.Implementations;
+using IpBlockingApi.Services.Interfaces;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // ── Controllers ───────────────────────────────────────────────────────────────
@@ -24,10 +29,8 @@ builder.Services.AddSwaggerGen(options =>
 builder.Services.AddHttpClient();
 
 // ── Repositories (singleton — shared in-memory state) ────────────────────────
-builder.Services.AddSingleton<IpBlockingApi.Repositories.Interfaces.ICountryRepository,
-    IpBlockingApi.Repositories.Implementations.CountryRepository>();
-builder.Services.AddSingleton<IpBlockingApi.Repositories.Interfaces.ILogRepository,
-    IpBlockingApi.Repositories.Implementations.LogRepository>();
+builder.Services.AddSingleton<ICountryRepository, CountryRepository>();
+builder.Services.AddSingleton<ILogRepository, LogRepository>();
 
 // ── GeoLocation: settings + typed HttpClient ──────────────────────────────────
 builder.Services.AddOptions<IpBlockingApi.Settings.GeoLocationSettings>()
@@ -36,8 +39,13 @@ builder.Services.AddOptions<IpBlockingApi.Settings.GeoLocationSettings>()
     .ValidateOnStart();
 
 builder.Services.AddHttpClient
-<IpBlockingApi.Services.Interfaces.IGeoLocationService,
-    IpBlockingApi.Services.Implementations.GeoLocationService>();
+    <IGeoLocationService, GeoLocationService>();
+
+// ── Application services ──────────────────────────────────────────────────────
+builder.Services.AddScoped<ICountryService,
+    CountryService>();
+builder.Services.AddScoped<IIpService,
+    IpService>();
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
 builder.Services.AddCors(options =>
