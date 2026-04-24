@@ -7,7 +7,20 @@ using IpBlockingApi.Services.Interfaces;
 var builder = WebApplication.CreateBuilder(args);
 
 // ── Controllers ───────────────────────────────────────────────────────────────
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        options.InvalidModelStateResponseFactory = ctx =>
+        {
+            var errors = ctx.ModelState
+                .Where(e => e.Value?.Errors.Count > 0)
+                .SelectMany(e => e.Value!.Errors.Select(x => x.ErrorMessage))
+                .FirstOrDefault() ?? "Validation failed.";
+
+            var result = IpBlockingApi.Common.ApiResponse<object>.Fail(errors);
+            return new Microsoft.AspNetCore.Mvc.BadRequestObjectResult(result);
+        };
+    });
 
 // ── Swagger / OpenAPI ─────────────────────────────────────────────────────────
 builder.Services.AddEndpointsApiExplorer();
