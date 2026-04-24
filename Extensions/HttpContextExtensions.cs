@@ -28,6 +28,13 @@ public static class HttpContextExtensions
         }
 
         // MapToIPv4 converts ::ffff:x.x.x.x (IPv6-mapped IPv4) back to plain IPv4.
-        return context.Connection.RemoteIpAddress?.MapToIPv4().ToString() ?? "unknown";
+        var remote = context.Connection.RemoteIpAddress;
+        if (remote is null) return "unknown";
+
+        // MapToIPv4 only makes sense for IPv6-mapped IPv4 (::ffff:x.x.x.x).
+        // Calling it on a real IPv6 address returns a garbage result.
+        return remote.IsIPv4MappedToIPv6
+            ? remote.MapToIPv4().ToString()
+            : remote.ToString();
     }
 }
