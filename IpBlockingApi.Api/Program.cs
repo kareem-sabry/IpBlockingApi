@@ -74,8 +74,6 @@ builder.Services.AddOptions<IpBlockingApi.Settings.GeoLocationSettings>()
     .ValidateDataAnnotations()
     .ValidateOnStart();
 
-builder.Services.AddHttpClient
-    <IGeoLocationService, GeoLocationService>();
 
 // ── Application services ──────────────────────────────────────────────────────
 builder.Services.AddScoped<ICountryService,

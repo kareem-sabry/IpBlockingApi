@@ -28,8 +28,6 @@ public sealed class GeoLocationService : IGeoLocationService
         _logger = logger;
         _httpClient = httpClient;
         _rateLimiter = rateLimiter;
-        _httpClient = httpClient;
-        
     }
 
     /// <inheritdoc/>
