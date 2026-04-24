@@ -23,6 +23,12 @@ builder.Services.AddSwaggerGen(options =>
 // ── HTTP Client ───────────────────────────────────────────────────────────────
 builder.Services.AddHttpClient();
 
+// ── Repositories (singleton — shared in-memory state) ────────────────────────
+builder.Services.AddSingleton<IpBlockingApi.Repositories.Interfaces.ICountryRepository,
+    IpBlockingApi.Repositories.Implementations.CountryRepository>();
+builder.Services.AddSingleton<IpBlockingApi.Repositories.Interfaces.ILogRepository,
+    IpBlockingApi.Repositories.Implementations.LogRepository>();
+
 // ── CORS ──────────────────────────────────────────────────────────────────────
 builder.Services.AddCors(options =>
 {
