@@ -54,10 +54,12 @@ public sealed class IpService : IIpService
         var isBlocked = _countryRepo.IsBlocked(geo.CountryCode);
 
         // Log every attempt — blocked or not — as required by the spec.
+        var checkedAt = DateTime.UtcNow;
+
         _logRepo.AddLog(new BlockedAttemptLog
         {
             IpAddress = ipAddress,
-            Timestamp = DateTime.UtcNow,
+            Timestamp = checkedAt,
             CountryCode = geo.CountryCode,
             IsBlocked = isBlocked,
             UserAgent = userAgent
@@ -73,7 +75,7 @@ public sealed class IpService : IIpService
             CountryCode = geo.CountryCode,
             CountryName = geo.CountryName,
             IsBlocked = isBlocked,
-            CheckedAt = DateTime.UtcNow
+            CheckedAt = checkedAt
         };
     }
 }

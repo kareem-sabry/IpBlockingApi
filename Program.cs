@@ -60,7 +60,14 @@ builder.Services.AddHttpClient();
 builder.Services.AddSingleton<ICountryRepository, CountryRepository>();
 builder.Services.AddSingleton<ILogRepository, LogRepository>();
 builder.Services.AddSingleton<IpBlockingApi.Common.GeoLocationRateLimiter>();
-builder.Services.AddHttpClient<IGeoLocationService, GeoLocationService>();
+
+var geoBaseUrl = builder.Configuration["GeoLocation:BaseUrl"]!.TrimEnd('/') + "/";
+builder.Services.AddHttpClient<IGeoLocationService, GeoLocationService>(client =>
+{
+    client.BaseAddress = new Uri(geoBaseUrl);
+    client.Timeout = TimeSpan.FromSeconds(10);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("IpBlockingApi/1.0");
+});
 // ── GeoLocation: settings + typed HttpClient ──────────────────────────────────
 builder.Services.AddOptions<IpBlockingApi.Settings.GeoLocationSettings>()
     .Bind(builder.Configuration.GetSection("GeoLocation"))

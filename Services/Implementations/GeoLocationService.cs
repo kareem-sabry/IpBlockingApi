@@ -29,10 +29,7 @@ public sealed class GeoLocationService : IGeoLocationService
         _httpClient = httpClient;
         _rateLimiter = rateLimiter;
         _httpClient = httpClient;
-
-        _httpClient.BaseAddress = new Uri(_settings.BaseUrl.TrimEnd('/') + "/");
-        _httpClient.Timeout = TimeSpan.FromSeconds(10);
-        _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("IpBlockingApi/1.0");
+        
     }
 
     /// <inheritdoc/>
