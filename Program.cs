@@ -80,8 +80,8 @@ builder.Services.AddHttpClient
 // ── Application services ──────────────────────────────────────────────────────
 builder.Services.AddScoped<ICountryService,
     CountryService>();
-builder.Services.AddScoped<IIpService,
-    IpService>();
+builder.Services.AddScoped<IIpService, IpService>();
+builder.Services.AddScoped<ILogService, LogService>();
 
 // ── Background services ───────────────────────────────────────────────────────
 builder.Services.AddHostedService<IpBlockingApi.BackgroundServices.TemporalBlockCleanupService>();

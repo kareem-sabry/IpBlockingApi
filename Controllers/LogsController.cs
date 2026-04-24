@@ -1,6 +1,6 @@
 ﻿using IpBlockingApi.Common;
 using IpBlockingApi.DTOs.Responses;
-using IpBlockingApi.Repositories.Interfaces;
+using IpBlockingApi.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IpBlockingApi.Controllers;
@@ -13,12 +13,12 @@ namespace IpBlockingApi.Controllers;
 [Produces("application/json")]
 public sealed class LogsController : ControllerBase
 {
-    private readonly ILogRepository _logRepo;
+    private readonly ILogService _logService;
     private readonly ILogger<LogsController> _logger;
 
-    public LogsController(ILogRepository logRepo, ILogger<LogsController> logger)
+    public LogsController(ILogService logService, ILogger<LogsController> logger)
     {
-        _logRepo = logRepo;
+        _logService = logService;
         _logger = logger;
     }
 
@@ -34,32 +34,7 @@ public sealed class LogsController : ControllerBase
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 10)
     {
-        page = Math.Max(1, page);
-        pageSize = Math.Clamp(pageSize, 1, 100);
-
-        var all = _logRepo.GetAllLogs().ToList();
-
-        var paged = all
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .Select(l => new BlockedAttemptLogResponse
-            {
-                IpAddress = l.IpAddress,
-                Timestamp = l.Timestamp,
-                CountryCode = l.CountryCode,
-                IsBlocked = l.IsBlocked,
-                UserAgent = l.UserAgent
-            })
-            .ToList();
-
-        var response = new PagedResponse<BlockedAttemptLogResponse>
-        {
-            Items = paged,
-            Page = page,
-            PageSize = pageSize,
-            TotalCount = all.Count
-        };
-
-        return Ok(ApiResponse<PagedResponse<BlockedAttemptLogResponse>>.Ok(response));
+        var result = _logService.GetBlockedAttempts(page, pageSize);
+        return Ok(ApiResponse<PagedResponse<BlockedAttemptLogResponse>>.Ok(result));
     }
 }
