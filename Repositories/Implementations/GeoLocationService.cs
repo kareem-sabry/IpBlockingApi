@@ -41,6 +41,12 @@ public sealed class GeoLocationService : IGeoLocationService
             return null;
         }
 
+        if (!TryConsumeRateSlot())
+        {
+            _logger.LogWarning("Internal rate limit reached — geo lookup skipped for IP: {Ip}", ipAddress);
+            return null;
+        }
+
         var path = string.IsNullOrWhiteSpace(_settings.ApiKey)
             ? $"{ipAddress.Trim()}/json/"
             : $"{ipAddress.Trim()}/json/?key={_settings.ApiKey}";
@@ -96,9 +102,40 @@ public sealed class GeoLocationService : IGeoLocationService
         }
     }
 
+    // ── Rate-limit guard ──────────────────────────────────────────────────────
+    // Simple sliding-window counter: max 45 calls per 60-second window.
+    // Protects the free ipapi.co tier (1 000 req/day) from accidental exhaustion.
+
+    private const int MaxCallsPerWindow = 45;
+    private int _callsInWindow = 0;
+    private DateTime _windowStart = DateTime.UtcNow;
+    private readonly object _rateLock = new();
+
+    /// <summary>
+    /// Returns <c>true</c> and increments the counter when a call is allowed.
+    /// Returns <c>false</c> when the current window is saturated.
+    /// </summary>
+    private bool TryConsumeRateSlot()
+    {
+        lock (_rateLock)
+        {
+            var now = DateTime.UtcNow;
+            if ((now - _windowStart).TotalSeconds >= 60)
+            {
+                _windowStart = now;
+                _callsInWindow = 0;
+            }
+
+            if (_callsInWindow >= MaxCallsPerWindow)
+                return false;
+
+            _callsInWindow++;
+            return true;
+        }
+    }
+
     // ── Private DTO ────────────────────────────────────────────────────────────
     // Maps the raw ipapi.co JSON response onto typed properties.
-
     private sealed class IpapiResponse
     {
         [JsonProperty("ip")] public string Ip { get; set; } = string.Empty;

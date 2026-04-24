@@ -1,3 +1,4 @@
+using IpBlockingApi.Middleware;
 using IpBlockingApi.Repositories.Implementations;
 using IpBlockingApi.Repositories.Interfaces;
 using IpBlockingApi.Services.Implementations;
@@ -79,9 +80,11 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // ── Middleware pipeline ────────────────────────────────────────────────────────
+// Exception handler must be first so it wraps the entire pipeline.
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 
-app.UseMiddleware<IpBlockingApi.Middleware.ExceptionHandlingMiddleware>();
-
+// Security headers on every response.
+app.UseMiddleware<SecurityHeadersMiddleware>();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
