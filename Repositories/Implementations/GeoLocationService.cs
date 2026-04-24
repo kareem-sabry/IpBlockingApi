@@ -15,15 +15,19 @@ public sealed class GeoLocationService : IGeoLocationService
 {
     private readonly HttpClient _httpClient;
     private readonly GeoLocationSettings _settings;
+    private readonly GeoLocationRateLimiter _rateLimiter;
     private readonly ILogger<GeoLocationService> _logger;
 
     public GeoLocationService(
         HttpClient httpClient,
         IOptions<GeoLocationSettings> options,
-        ILogger<GeoLocationService> logger)
+        ILogger<GeoLocationService> logger,
+        GeoLocationRateLimiter rateLimiter)
     {
         _settings = options.Value;
         _logger = logger;
+        _httpClient = httpClient;
+        _rateLimiter = rateLimiter;
         _httpClient = httpClient;
 
         _httpClient.BaseAddress = new Uri(_settings.BaseUrl.TrimEnd('/') + "/");
@@ -41,7 +45,7 @@ public sealed class GeoLocationService : IGeoLocationService
             return null;
         }
 
-        if (!TryConsumeRateSlot())
+        if (!_rateLimiter.TryConsume())
         {
             _logger.LogWarning("Internal rate limit reached — geo lookup skipped for IP: {Ip}", ipAddress);
             return null;
@@ -102,37 +106,6 @@ public sealed class GeoLocationService : IGeoLocationService
         }
     }
 
-    // ── Rate-limit guard ──────────────────────────────────────────────────────
-    // Simple sliding-window counter: max 45 calls per 60-second window.
-    // Protects the free ipapi.co tier (1 000 req/day) from accidental exhaustion.
-
-    private const int MaxCallsPerWindow = 45;
-    private int _callsInWindow = 0;
-    private DateTime _windowStart = DateTime.UtcNow;
-    private readonly object _rateLock = new();
-
-    /// <summary>
-    /// Returns <c>true</c> and increments the counter when a call is allowed.
-    /// Returns <c>false</c> when the current window is saturated.
-    /// </summary>
-    private bool TryConsumeRateSlot()
-    {
-        lock (_rateLock)
-        {
-            var now = DateTime.UtcNow;
-            if ((now - _windowStart).TotalSeconds >= 60)
-            {
-                _windowStart = now;
-                _callsInWindow = 0;
-            }
-
-            if (_callsInWindow >= MaxCallsPerWindow)
-                return false;
-
-            _callsInWindow++;
-            return true;
-        }
-    }
 
     // ── Private DTO ────────────────────────────────────────────────────────────
     // Maps the raw ipapi.co JSON response onto typed properties.

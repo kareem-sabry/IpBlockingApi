@@ -46,7 +46,8 @@ builder.Services.AddHttpClient();
 // ── Repositories (singleton — shared in-memory state) ────────────────────────
 builder.Services.AddSingleton<ICountryRepository, CountryRepository>();
 builder.Services.AddSingleton<ILogRepository, LogRepository>();
-
+builder.Services.AddSingleton<IpBlockingApi.Common.GeoLocationRateLimiter>();
+builder.Services.AddHttpClient<IGeoLocationService, GeoLocationService>();
 // ── GeoLocation: settings + typed HttpClient ──────────────────────────────────
 builder.Services.AddOptions<IpBlockingApi.Settings.GeoLocationSettings>()
     .Bind(builder.Configuration.GetSection("GeoLocation"))
