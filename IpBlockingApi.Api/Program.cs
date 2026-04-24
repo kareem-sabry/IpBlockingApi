@@ -74,7 +74,6 @@ builder.Services.AddOptions<IpBlockingApi.Settings.GeoLocationSettings>()
     .ValidateDataAnnotations()
     .ValidateOnStart();
 
-
 // ── Application services ──────────────────────────────────────────────────────
 builder.Services.AddScoped<ICountryService,
     CountryService>();
@@ -104,11 +103,9 @@ app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 // Security headers on every response.
 app.UseMiddleware<SecurityHeadersMiddleware>();
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseCors();
 app.UseHttpsRedirection();

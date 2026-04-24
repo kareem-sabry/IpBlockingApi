@@ -32,7 +32,7 @@ public sealed class CountriesController : ControllerBase
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The newly created blocked-country record.</returns>
     [HttpPost("block")]
-    [ProducesResponseType(typeof(ApiResponse<BlockedCountryResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<BlockedCountryResponse>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiResponse<BlockedCountryResponse>), StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> BlockCountry(
@@ -43,7 +43,8 @@ public sealed class CountriesController : ControllerBase
         if (!success)
             return Conflict(ApiResponse<BlockedCountryResponse>.Fail(error!));
 
-        return Ok(ApiResponse<BlockedCountryResponse>.Ok(data!, "Country blocked successfully."));
+        return StatusCode(StatusCodes.Status201Created,
+            ApiResponse<BlockedCountryResponse>.Ok(data!, "Country blocked successfully."));
     }
 
     /// <summary>
@@ -88,7 +89,7 @@ public sealed class CountriesController : ControllerBase
     /// <param name="request">Country code and duration in minutes.</param>
     /// <param name="ct">Cancellation token.</param>
     [HttpPost("temporal-block")]
-    [ProducesResponseType(typeof(ApiResponse<TemporalBlockResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<TemporalBlockResponse>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiResponse<TemporalBlockResponse>), StatusCodes.Status409Conflict)]
     [ProducesResponseType(typeof(ApiResponse<TemporalBlockResponse>), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> TemporalBlock(
@@ -104,6 +105,7 @@ public sealed class CountriesController : ControllerBase
                 : BadRequest(ApiResponse<TemporalBlockResponse>.Fail(error));
         }
 
-        return Ok(ApiResponse<TemporalBlockResponse>.Ok(data!, "Country temporarily blocked."));
+        return StatusCode(StatusCodes.Status201Created,
+            ApiResponse<TemporalBlockResponse>.Ok(data!, "Country temporarily blocked."));
     }
 }
