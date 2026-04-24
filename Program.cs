@@ -16,13 +16,27 @@ builder.Services.AddSwaggerGen(options =>
     {
         Title = "IP Blocking API",
         Version = "v1",
-        Description = "Manage blocked countries and validate IP addresses via geolocation."
+        Description = """
+                      REST API for managing blocked countries and validating IP addresses
+                      using a third-party geolocation provider (ipapi.co).
+                      All data is stored in-memory — no database is used.
+                      """,
+        Contact = new Microsoft.OpenApi.Models.OpenApiContact
+        {
+            Name = "GitHub Repository",
+            Url = new Uri("https://github.com/kareem-sabry/IpBlockingApi")
+        }
     });
 
+    // Include XML documentation comments from the compiled assembly.
     var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
     if (File.Exists(xmlPath))
         options.IncludeXmlComments(xmlPath);
+
+    // Show enums as strings and keep schema definitions inline for readability.
+    options.UseInlineDefinitionsForEnums();
+    options.DescribeAllParametersInCamelCase();
 });
 
 // ── HTTP Client ───────────────────────────────────────────────────────────────
