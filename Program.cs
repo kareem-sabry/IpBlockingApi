@@ -29,6 +29,16 @@ builder.Services.AddSingleton<IpBlockingApi.Repositories.Interfaces.ICountryRepo
 builder.Services.AddSingleton<IpBlockingApi.Repositories.Interfaces.ILogRepository,
     IpBlockingApi.Repositories.Implementations.LogRepository>();
 
+// ── GeoLocation: settings + typed HttpClient ──────────────────────────────────
+builder.Services.AddOptions<IpBlockingApi.Settings.GeoLocationSettings>()
+    .Bind(builder.Configuration.GetSection("GeoLocation"))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+builder.Services.AddHttpClient
+<IpBlockingApi.Services.Interfaces.IGeoLocationService,
+    IpBlockingApi.Services.Implementations.GeoLocationService>();
+
 // ── CORS ──────────────────────────────────────────────────────────────────────
 builder.Services.AddCors(options =>
 {
