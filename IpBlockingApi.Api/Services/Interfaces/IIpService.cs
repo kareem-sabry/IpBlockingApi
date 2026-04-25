@@ -15,9 +15,9 @@ public interface IIpService
 
     /// <summary>
     /// Determines whether the country resolved from <paramref name="ipAddress"/> is blocked.
-    /// The attempt is always written to the log regardless of the result.
-    /// Returns <c>null</c> when geolocation fails.
+    /// Always writes an attempt log entry and always returns a response —
+    /// even when geolocation fails (defaults to not blocked).
     /// </summary>
-    Task<BlockCheckResponse?> CheckBlockAsync(
+    Task<BlockCheckResponse> CheckBlockAsync(
         string ipAddress, string userAgent, CancellationToken ct = default);
 }

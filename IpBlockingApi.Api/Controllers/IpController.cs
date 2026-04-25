@@ -62,18 +62,12 @@ public sealed class IpController : ControllerBase
     /// <param name="ct">Cancellation token.</param>
     [HttpGet("check-block")]
     [ProducesResponseType(typeof(ApiResponse<BlockCheckResponse>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponse<BlockCheckResponse>), StatusCodes.Status502BadGateway)]
     public async Task<IActionResult> CheckBlock(CancellationToken ct)
     {
-        var callerIp = HttpContext.GetCallerIp();
+        var callerIp  = HttpContext.GetCallerIp();
         var userAgent = HttpContext.Request.Headers.UserAgent.ToString();
 
         var result = await _ipService.CheckBlockAsync(callerIp, userAgent, ct);
-
-        if (result is null)
-            return StatusCode(StatusCodes.Status502BadGateway,
-                ApiResponse<BlockCheckResponse>.Fail(
-                    "Could not resolve geolocation for your IP address."));
 
         return Ok(ApiResponse<BlockCheckResponse>.Ok(result));
     }

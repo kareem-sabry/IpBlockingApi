@@ -40,42 +40,58 @@ public sealed class IpService : IIpService
     }
 
     /// <inheritdoc/>
-    public async Task<BlockCheckResponse?> CheckBlockAsync(
+    public async Task<BlockCheckResponse> CheckBlockAsync(
         string ipAddress, string userAgent, CancellationToken ct = default)
     {
-        var geo = await _geoService.LookupAsync(ipAddress, ct);
+        var geo       = await _geoService.LookupAsync(ipAddress, ct);
+        var checkedAt = DateTime.UtcNow;
 
         if (geo is null)
         {
-            _logger.LogWarning("Block check skipped — geo lookup failed for IP: {Ip}", ipAddress);
-            return null;
+            _logRepo.AddLog(new BlockedAttemptLog
+            {
+                IpAddress   = ipAddress,
+                Timestamp   = checkedAt,
+                CountryCode = "XX",
+                IsBlocked   = false,
+                UserAgent   = userAgent
+            });
+
+            _logger.LogWarning(
+                "Block check: geo lookup failed for IP {Ip} — logged as not blocked", ipAddress);
+
+            return new BlockCheckResponse
+            {
+                IpAddress   = ipAddress,
+                CountryCode = "XX",
+                CountryName = "Unknown",
+                IsBlocked   = false,
+                CheckedAt   = checkedAt
+            };
         }
 
         var isBlocked = _countryRepo.IsBlocked(geo.CountryCode);
 
-        // Log every attempt — blocked or not — as required by the spec.
-        var checkedAt = DateTime.UtcNow;
-
         _logRepo.AddLog(new BlockedAttemptLog
         {
-            IpAddress = ipAddress,
-            Timestamp = checkedAt,
+            IpAddress   = ipAddress,
+            Timestamp   = checkedAt,
             CountryCode = geo.CountryCode,
-            IsBlocked = isBlocked,
-            UserAgent = userAgent
+            IsBlocked   = isBlocked,
+            UserAgent   = userAgent
         });
 
         _logger.LogInformation(
-            "Block check complete: IP={Ip} Country={Code} IsBlocked={Blocked}",
+            "Block check: IP={Ip} Country={Code} IsBlocked={Blocked}",
             ipAddress, geo.CountryCode, isBlocked);
 
         return new BlockCheckResponse
         {
-            IpAddress = ipAddress,
+            IpAddress   = ipAddress,
             CountryCode = geo.CountryCode,
             CountryName = geo.CountryName,
-            IsBlocked = isBlocked,
-            CheckedAt = checkedAt
+            IsBlocked   = isBlocked,
+            CheckedAt   = checkedAt
         };
     }
 }
