@@ -1,8 +1,7 @@
 # IP Blocking API
 
-A **.NET 9** REST API for managing blocked countries and validating IP addresses
-using the [ipapi.co](https://ipapi.co) geolocation service.  
-All state is stored **in-memory** — no database is required.
+A .NET 8 REST API for managing blocked countries and validating IP addresses.
+Uses [ipapi.co](https://ipapi.co) for geolocation. No database — everything lives in memory.
 
 ---
 
@@ -10,12 +9,13 @@ All state is stored **in-memory** — no database is required.
 
 | Concern | Choice |
 |---|---|
-| Framework | ASP.NET Core 9 Web API |
-| In-memory storage | `ConcurrentDictionary`, `ConcurrentBag` |
-| Geolocation | ipapi.co (free tier, no key required for basic use) |
-| Background tasks | `BackgroundService` (hosted service) |
+| Framework | ASP.NET Core 8 Web API |
+| In-memory storage | `ConcurrentDictionary`, `ConcurrentQueue` |
+| Geolocation | ipapi.co |
+| Background tasks | `BackgroundService` + `PeriodicTimer` |
 | API docs | Swagger / Swashbuckle |
 | JSON | Newtonsoft.Json |
+| Tests | xUnit + Moq |
 
 ---
 
@@ -23,15 +23,15 @@ All state is stored **in-memory** — no database is required.
 
 ```
 IpBlockingApi/
-├── BackgroundServices/   # Temporal block cleanup (runs every 5 min)
-├── Common/               # ApiResponse wrapper, ValidationHelper, CountryNameLookup
+├── BackgroundServices/   # Cleans up expired temporal blocks every 5 minutes
+├── Common/               # ApiResponse<T>, ValidationHelper, CountryNameLookup
 ├── Controllers/          # CountriesController, IpController, LogsController
-├── DTOs/                 # Requests + Responses
-├── Extensions/           # HttpContext helpers (caller IP extraction)
-├── Middleware/           # Exception handling, security headers
-├── Models/               # Domain models (BlockedCountry, TemporalBlock, Log)
-├── Repositories/         # In-memory thread-safe storage layer
-├── Services/             # Business logic + GeoLocation HTTP client
+├── DTOs/                 # Request and response models
+├── Extensions/           # HttpContext helpers (caller IP resolution)
+├── Middleware/           # Global exception handler, security headers
+├── Models/               # Domain models — BlockedCountry, TemporalBlock, AttemptLog
+├── Repositories/         # Thread-safe in-memory storage
+├── Services/             # Business logic, GeoLocation HTTP client
 └── Settings/             # GeoLocationSettings (bound from appsettings.json)
 ```
 
@@ -39,32 +39,36 @@ IpBlockingApi/
 
 ## Getting Started
 
-### 1. Configure the geolocation API key
+### 1. Geolocation API key
 
-Open `appsettings.Development.json` and set your key:
+Open `appsettings.json`:
 
 ```json
-{
-  "GeoLocation": {
-    "Provider": "ipapi",
-    "ApiKey": "YOUR_KEY_HERE",
-    "BaseUrl": "https://ipapi.co"
-  }
+"GeoLocation": {
+  "Provider": "ipapi",
+  "ApiKey": "",
+  "BaseUrl": "https://ipapi.co"
 }
 ```
 
-> **No key needed for basic testing.** The free tier allows 1 000 requests/day
-> without authentication. Leave `ApiKey` empty to use it unauthenticated.
+**`ApiKey` is empty on purpose.** ipapi.co's free tier does not require registration or
+an API key — just hit the endpoint directly. The limit is 1,000 lookups/day, which is
+plenty for development and testing. If you have a paid key, paste it here and the
+service picks it up automatically.
 
-### 2. Run the project
+> See: [ipapi.co/api/#authentication](https://ipapi.co/api/#authentication)
+
+### 2. Run
 
 ```bash
-dotnet run
+dotnet run --project IpBlockingApi.Api
 ```
 
-### 3. Open Swagger UI
+### 3. Open Swagger
 
-Navigate to `https://localhost:{port}/swagger` in your browser.
+```
+https://localhost:{port}/swagger
+```
 
 ---
 
@@ -74,61 +78,87 @@ Navigate to `https://localhost:{port}/swagger` in your browser.
 
 | Method | Route | Description |
 |--------|-------|-------------|
-| `POST` | `/api/countries/block` | Permanently block a country |
-| `DELETE` | `/api/countries/block/{countryCode}` | Remove a permanent block |
-| `GET` | `/api/countries/blocked?page=1&pageSize=10&search=` | List blocked countries (paginated + filtered) |
-| `POST` | `/api/countries/temporal-block` | Block a country for 1–1440 minutes |
+| `POST` | `/api/countries/block` | Add a country to the permanent block list |
+| `DELETE` | `/api/countries/block/{countryCode}` | Remove a permanent block (404 if not found) |
+| `GET` | `/api/countries/blocked` | Paginated + searchable list of blocked countries |
+| `POST` | `/api/countries/temporal-block` | Block a country for 1–1440 minutes (409 on duplicate) |
 
 ### IP
 
 | Method | Route | Description |
 |--------|-------|-------------|
-| `GET` | `/api/ip/lookup?ipAddress={ip}` | Resolve geolocation for an IP (uses caller IP if omitted) |
-| `GET` | `/api/ip/check-block` | Check if the caller's country is blocked (always logged) |
+| `GET` | `/api/ip/lookup` | Resolve geolocation for any IP (falls back to caller's IP if omitted) |
+| `GET` | `/api/ip/check-block` | Check whether the caller's country is blocked — always returns 200, always logged |
 
 ### Logs
 
 | Method | Route | Description |
 |--------|-------|-------------|
-| `GET` | `/api/logs/blocked-attempts?page=1&pageSize=10` | Paginated blocked-attempt log |
+| `GET` | `/api/logs/blocked-attempts` | Paginated attempt log, ordered by timestamp descending |
+
+Query params for paginated endpoints: `page`, `pageSize`, `search` (where applicable).
 
 ---
 
-## Sample Requests
+## Request Examples
 
-**Block a country**
+**Permanently block a country**
 ```json
 POST /api/countries/block
 { "countryCode": "US" }
 ```
 
-**Temporary block for 2 hours**
+**Block for 2 hours**
 ```json
 POST /api/countries/temporal-block
 { "countryCode": "EG", "durationMinutes": 120 }
 ```
 
-**IP lookup**
+**Look up an IP**
 ```
 GET /api/ip/lookup?ipAddress=8.8.8.8
 ```
 
 ---
 
-## All Responses Follow This Shape
+## Response Shape
+
+Every endpoint returns the same envelope:
 
 ```json
 {
   "success": true,
   "message": "Request completed successfully.",
-  "data": { }
+  "data": {}
 }
 ```
 
+Errors follow the same shape with `"success": false` and a message describing what went wrong. Stack traces never appear outside the Development environment.
+
+---
+
 ## Security
 
-- Global exception middleware — stack traces never leak in production
-- Security headers on every response (`X-Content-Type-Options`, `X-Frame-Options`, etc.)
-- Internal rate-limit guard (45 geo calls / minute) to protect the free API tier
-- IP address sanitized and validated before any external call
-- `X-Forwarded-For` parsing handles comma-separated lists and proxy chains
+The middleware pipeline handles a few things worth calling out:
+
+**Exception handling** — catches anything unhandled, logs it, returns a `ProblemDetails`-style response. The actual exception message only surfaces in Development.
+
+**Security headers** — every response gets `X-Content-Type-Options`, `X-Frame-Options`, `X-XSS-Protection`, `Referrer-Policy`, and `Cache-Control: no-store`.
+
+**Rate limiting** — the IP endpoints use .NET 8's built-in fixed-window limiter: 30 requests/minute per IP. Exceeding it returns 429 with a `Retry-After` header.
+
+**Input validation** — country codes are checked against the full ISO 3166-1 alpha-2 list before any operation. IPs go through `IPAddress.TryParse` before hitting the geolocation service.
+
+**Geo client guard** — a separate sliding-window limiter caps internal calls to ipapi.co at 45/minute to stay well inside the free tier.
+
+**PII handling** — the last octet of every IP address is masked in logs (`192.168.1.xxx`). User-Agent strings are sanitized and capped at 256 characters before storage.
+
+---
+
+## Running Tests
+
+```bash
+dotnet test
+```
+
+Tests cover `CountryService` (block, unblock, duplicate detection, pagination, search, validation) and `GeoLocationService` (successful parse, network error, 429 handling).
