@@ -27,6 +27,10 @@ public sealed class CountryService : ICountryService
     {
         var code = Normalize(request.CountryCode);
 
+        if (!CountryNameLookup.IsKnownCode(code))
+            return Fail<BlockedCountryResponse>(
+                $"Unknown or unsupported country code: '{code}'.");
+
         if (_countryRepo.IsPermanentlyBlocked(code))
         {
             _logger.LogWarning("Duplicate permanent block attempt: {Code}", code);
