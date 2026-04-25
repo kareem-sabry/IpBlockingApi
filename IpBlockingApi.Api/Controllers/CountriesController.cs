@@ -52,7 +52,7 @@ public sealed class CountriesController : ControllerBase
     /// </summary>
     /// <param name="countryCode">ISO 3166-1 alpha-2 code of the country to unblock.</param>
     [HttpDelete("block/{countryCode}")]
-    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
     public IActionResult UnblockCountry([FromRoute] string countryCode)
     {
@@ -60,9 +60,8 @@ public sealed class CountriesController : ControllerBase
 
         if (!success)
             return NotFound(ApiResponse<object>.Fail(error!));
+        return NoContent();
 
-        var code = countryCode.Trim().ToUpperInvariant();
-        return Ok(ApiResponse<object>.Ok(new { }, $"Country '{code}' has been unblocked."));
     }
 
     /// <summary>
