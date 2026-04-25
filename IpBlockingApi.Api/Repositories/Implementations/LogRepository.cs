@@ -10,10 +10,10 @@ namespace IpBlockingApi.Repositories.Implementations;
 /// </summary>
 public sealed class LogRepository : ILogRepository
 {
-    private readonly ConcurrentBag<BlockedAttemptLog> _logs = new();
+    private readonly ConcurrentQueue<BlockedAttemptLog> _logs = new();
 
     /// <inheritdoc/>
-    public void AddLog(BlockedAttemptLog log) => _logs.Add(log);
+    public void AddLog(BlockedAttemptLog log) => _logs.Enqueue(log);
 
     /// <inheritdoc/>
     public IEnumerable<BlockedAttemptLog> GetAllLogs()
